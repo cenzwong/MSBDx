@@ -3,9 +3,9 @@
 ## Content
 - [Concept]()
 - [MPI](#mpi)
-- [pThread]()
+- [pThread](#pthread)
 - [OpenMP]()
-- [CUDA]()
+- [CUDA](#cuda)
 
 ## MPI
 Important component
