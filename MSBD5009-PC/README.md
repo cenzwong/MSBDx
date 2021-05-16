@@ -9,7 +9,7 @@
 
 ## MPI
 Important component
-```
+```C++
 // MPI initialization
 MPI_Init(&argc, &argv);
 
@@ -46,4 +46,15 @@ for (int v = my_begin_offset; v < my_end_offset; v++) {
  if (my_rank == 0) {
  memcpy(flow, loc_flow, sizeof(int) * loc_n * loc_n);
  }
+```
+
+## pThread
+```c++
+
+```
+
+
+## CUDA
+```c++
+
 ```
