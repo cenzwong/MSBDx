@@ -46,7 +46,57 @@ for (int v = my_begin_offset; v < my_end_offset; v++) {
  if (my_rank == 0) {
  memcpy(flow, loc_flow, sizeof(int) * loc_n * loc_n);
  }
+ 
+ //**********************
+ // MPI_initialization
+ MPI_Init(&argc, &argv);
+ 
+ //set num_machines and my_rank
+ MPI_Comm_size(comm, &num_machines);
+ MPI_Comm_rank(comm, &my_rank);
+ 
+//broadcast ref_len, read_len, and num_reads
+MPI_Bcast(&ref_len, 1, MPI_INT, 0, comm);
+MPI_Bcast(&read_len, 1, MPI_INT, 0, comm);
+MPI_Bcast(&num_reads, 1, MPI_INT, 0, comm);
+
+//Other processes allocate the reference string
+if (my_rank > 0){
+ ref = (char *)malloc(sizeof(char) * (ref_len + 1));
+}
+
+//broadcast the reference string
+MPI_Bcast(ref, ref_len+1, MPI_CHAR, 0, comm);
+
+//number of reads to align in current process
+int my_num_reads = offsets[my_rank + 1] - offsets[my_rank];
+
+//process 0 sends reads to other processes
+if(my_rank == 0){
+ for (int i = 1; i < num_machines; i++){
+  MPI_Send(reads + offsets[i] * (read_len+1),(offsets[i+1]-offsets[i]) * (read_len + 1), MPI_CHAR, i, 0, comm);
+ }
+}else {
+ //other processes allocate memory for reads and receive
+ reads = (char *)malloc(sizeof(char) * my_num_reads * (read_len + 1));
+ MPI_Recv(reads, my_num_reads * (read_len + 1), MPI_CHAR, 0, 0, comm, MPI_STATUS_IGNORE);
+}
+
+if (my_rank == 0) {
+ // process 0 receives results from other processes
+    for (int i = 1; i < num_machines; i++) {
+        MPI_Recv(results + offsets[i], offsets[i + 1] - offsets[i], MPI_INT, i, 0, comm, MPI_STATUS_IGNORE);
+    }
+    // output results
+    for (int i = 0; i < num_reads; i++) {
+        cout << results[i] << endl;
+    }
+    } else {
+    // other processes send local results to process 0
+        MPI_Send(results, my_num_reads, MPI_INT, 0, 0, comm);
+    }
 ```
+
 
 ## pThread
 ```c++
@@ -73,6 +123,28 @@ pthread_create(&threads[i], &attr, thread_work, (void *)&parameters[i]);
  for (int i = 0; i < num_threads; i++) {
  pthread_join(threads[i], nullptr);
  }
+ 
+ //**********************
+// critical section starts before updating read_id and next read_id
+pthread_mutex_lock(&mutex);
+// end of critical section
+pthread_mutex_unlock(&mutex);
+
+//exit if all reads has been aligned
+if(read_id >= my_num_reads){
+ break;;
+}
+
+//initialize mutex
+pthread_mutex_init(&mutex, nullptr);
+
+//create_threads
+pthread_create(&threads[i], &attr, worker, (void *)&params[i]);
+
+//wait for all threads to finish
+for (int i = 0; i < num_threads; i++){
+ pthread_join(threads[i], nullptr);
+}
 ```
 
 
@@ -115,4 +187,17 @@ cudaMemcpy(parent, d_parent, sizeof(int) * N, cudaMemcpyDeviceToHost);
 
 // update flow to device
 cudaMemcpy(d_flow, flow, sizeof(int) * N * N, cudaMemcpyHostToDevice);
+
+//**********************
+//exit if current thread has no read to align
+if(tid >= d_num_reads){
+ return;
+}
+
+// cllocate memory on GPU
+cudaMalloc(&d_ref, sizeof(char) * (ref_len + 1)));
+// copy reference and reads to GPU
+cudaMemcpy(d_ref, ref, sizeof(char) * (ref_len + 1), cudaMemcpyHostToDevice);
+// copy results to CPU
+cudaMemcpy(results + read_id, d_results, sizeof(int) * d_num_reads, cudaMemcpyDeviceToHost);
 ```
