@@ -1,0 +1,353 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Template for USENIX papers.
+%
+% History:
+%
+% - TEMPLATE for Usenix papers, specifically to meet requirements of
+%   USENIX '05. originally a template for producing IEEE-format
+%   articles using LaTeX. written by Matthew Ward, CS Department,
+%   Worcester Polytechnic Institute. adapted by David Beazley for his
+%   excellent SWIG paper in Proceedings, Tcl 96. turned into a
+%   smartass generic template by De Clarke, with thanks to both the
+%   above pioneers. Use at your own risk. Complaints to /dev/null.
+%   Make it two column with no page numbering, default is 10 point.
+%
+% - Munged by Fred Douglis <douglis@research.att.com> 10/97 to
+%   separate the .sty file from the LaTeX source template, so that
+%   people can more easily include the .sty file into an existing
+%   document. Also changed to more closely follow the style guidelines
+%   as represented by the Word sample file.
+%
+% - Note that since 2010, USENIX does not require endnotes. If you
+%   want foot of page notes, don't include the endnotes package in the
+%   usepackage command, below.
+% - This version uses the latex2e styles, not the very ancient 2.09
+%   stuff.
+%
+% - Updated July 2018: Text block size changed from 6.5" to 7"
+%
+% - Updated Dec 2018 for ATC'19:
+%
+%   * Revised text to pass HotCRP's auto-formatting check, with
+%     hotcrp.settings.submission_form.body_font_size=10pt, and
+%     hotcrp.settings.submission_form.line_height=12pt
+%
+%   * Switched from \endnote-s to \footnote-s to match Usenix's policy.
+%
+%   * \section* => \begin{abstract} ... \end{abstract}
+%
+%   * Make template self-contained in terms of bibtex entires, to allow
+%     this file to be compiled. (And changing refs style to 'plain'.)
+%
+%   * Make template self-contained in terms of figures, to
+%     allow this file to be compiled. 
+%
+%   * Added packages for hyperref, embedding fonts, and improving
+%     appearance.
+%   
+%   * Removed outdated text.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[letterpaper,twocolumn,10pt]{article}
+\usepackage{usenix2019_v3}
+% graphic package
+\usepackage{graphicx}
+% image folder link
+\graphicspath{ {./images/} }
+% to be able to draw some self-contained figs
+\usepackage{tikz}
+\usepackage{amsmath}
+% inlined bib file
+\usepackage{filecontents}
+
+
+%-------------------------------------------------------------------------------
+\begin{document}
+%-------------------------------------------------------------------------------
+
+%don't want date printed
+\date{}
+
+% make title bold and 14 pt font (Latex default is non-bold, 16 pt)
+\title{\Large \bf MSBD5008 Written Report - COVID19 Apple Mobility Data
+}
+
+%for single author (just remove % characters)
+\author{
+{\rm Hui Ho Yin}\\
+The Hong Kong University\\
+of Science and Technology\\
+hyhuiad@connect.ust.hk
+\and
+{\rm Tam Ho Sing}\\
+The Hong Kong University\\
+of Science and Technology\\
+@connect.ust.hk
+\and
+{\rm Chan Ho Yeung}\\
+The Hong Kong University\\
+of Science and Technology\\
+hychanbe@connect.ust.hk
+\and
+{\rm Wong Tsz Ho}\\
+The Hong Kong University\\
+of Science and Technology\\
+cenz.wong@connect.ust.hk
+% copy the following lines to add more authors
+% \and
+% {\rm Name}\\
+%Name Institution
+} % end author
+
+\maketitle
+
+%-------------------------------------------------------------------------------
+\begin{abstract}
+%-------------------------------------------------------------------------------
+This work is to find out the important features to predict the US County COVID risk level by leveraging public data from Apple, US State Governments, US County Governments, US Health Department, and US Census. A graph neural network model and some insightful relationships between features will also be presented.
+\end{abstract}
+
+
+%-------------------------------------------------------------------------------
+\section{Problem Statement}
+%-------------------------------------------------------------------------------
+The COVID-19 pandemic, also known as the coronavirus pandemic, was first discovered in 2019. Since the first discovery of COVID, it has been mutating and the variants have become a threat to multiple countries, as of 2 December 2021, there are more than 263 million confirmed cases, 5.22 million confirmed deaths. It has become one of the deadliest virus in history.  ~\cite{coviddata}. \\
+
+By leveraging the Apple mobility data, the US census data, the US state government data, the US county government data, and the US health department data, we aim to predict the next outbreak in the US by predicting outbreak risk level of counties, using previous case number, death number, and mobility number of nearby counties. As a result, a county can have a more accurate expectation on its COVID outbreak risk level in the near future. 
+
+%-------------------------------------------------------------------------------
+\section{Dataset Description}
+%-------------------------------------------------------------------------------
+We have used data from three different sources, namely, Apple, National Bureau of Economic Research (NBER), and the New York Times, as mentioned in the previous sections, the ultimate sources of these sources would be the US census, the US state government, the US county government, and the US health department. ~\cite{applemobility}~\cite{nytimes}~\cite{nber}.\\
+
+For Apple mobility data, there are serval level of data provided, namely, country-level, region-level, subregion-level, county-level. For each layer, there are mobility data of different transportation type, namely, driving, walking, and transit. For each transportation and level of data, mobility trend data starting from 13-Jan-2020 are available.  ~\cite{applemobility}.
+\begin{tabular}{ |p{2cm}||p{4cm}|p{1cm}|  }
+ \hline
+ \multicolumn{3}{|c|}{Datasets} \\
+ \hline
+ Dataset    & Description & Size\\
+ \hline
+ Apple Mobility Data & 
+    4691 rows of daily mobility data with respect to different geo\_type, transportation\_type since 13-Jan-2020
+ & 20MB\\
+ \hline
+ County Distance Data &   
+    Paired county distance with respect to distance constraint of 50 miles, 100 miles, 500 miles, and unlimited 
+   & 
+    1MB
+    4MB
+    82MB
+    325MB 
+ \\
+ \hline
+ Daily COVID Data  &
+ Cumulative daily case and death number of each county since 21-Jan-2020
+ & 77MB\\
+ \hline
+\end{tabular}\\
+
+Apple mobility trend data geo\_type vs transportation type: \\
+\begin{tabular}{ |p{2.5cm}||p{1cm}|p{1cm}|p{1cm}|p{1cm}|  }
+ \hline
+ \multicolumn{5}{|c|}{Apple Mobility Data} \\
+ \hline
+ Type    & Driving & Transit & Walking & Total\\
+ \hline
+ City & 299 & 197 & 294 & 790\\
+ \hline
+ Country/Region & 63 & 27 & 63 & 153\\
+ \hline
+ County(US) & 2090 & 152 & 396 & 2638\\
+ \hline
+ Sub-region & 596 & 175 & 339 & 1110\\
+ \hline
+\end{tabular}\\
+
+We chose county driving data for our project, as it is comparatively the most complete data:  \\
+\begin{tabular}{ |p{2.5cm}||p{1cm}|p{1.5cm}|p{1cm}|  }
+ \hline
+ \multicolumn{4}{|c|}{Driving Mobility Data} \\
+ \hline
+ Type    & Driving & Total & \% \\
+ \hline
+ City & 299 & 10,000+ & <3\\
+ \hline
+ Country/Region & 63 & 195 & 32\\
+ \hline
+ County(US) & 2,090 & 3,006 & 66\\
+ \hline
+ Sub-region & 596 & unknown & -\\
+ \hline
+\end{tabular}\\
+
+Number of county pairs with respect of different distance constraint: \\
+\begin{tabular}{ |p{3cm}||p{3cm}|  }
+ \hline
+ \multicolumn{2}{|c|}{County Distance} \\
+ \hline
+ Distance    & Pairs \\
+ \hline
+ 50 miles & 38,794\\
+ \hline
+ 100 miles & 147,158\\
+ \hline
+ 500 miles & 2,537,351\\
+ \hline
+ Unlimited & 10,371,621\\
+ \hline
+\end{tabular}\\
+
+The distance between two counties is not the straight line distance between mid-points of two counties, it is calculated by the greater circle distance between the internal points of two counties.~\cite{nber}~\cite{internalpoint}.
+
+Let $\lambda_1$, $\phi_1$, $\lambda_2$, $\phi_2$ be the latitude and longitude of two points, the actual arc length $d$ of this two points is calculated by:
+
+\[d = r\arccos(\sin\phi_1\sin\phi_2+\cos\phi_1\cos\phi_2\cos(|\lambda_2-\lambda_1|))\]
+
+where $r$ is the radius of the Earth.~\cite{countydis}.\\
+
+The internal points of counties are calculated by their latitude and longitude, which is near the geographical centre most of the time. For irregular shaped counties, if the internal points are calculated outside of the boundary of the counties, the actual internal point would be the point in the boundary of the counties which is closest to the calculated internal point.~\cite{internalpoint}.\\
+
+As there are too many pairs if we use unlimited distance, which might affect the efficiency in our project, we decided to not use the unlimited distance pairs. 
+%-------------------------------------------------------------------------------
+\section{Feature Preprocessing \& Engineering}
+%-------------------------------------------------------------------------------
+\subsection{Data Cleansing}
+\subsubsection{COVID Case / Death Number}
+As the COVID case and death number from the New York times are sourced from different organization including US County Governments, US State Governments, and US Health Departments, there are some discrepancy between data of different dates. The case and death number published by the New York Times are cumulative number, however, there are data point where the number is less than the day before that data point. A large discrepancy will affect the result of our model, as a result, we decided to exclude all counties that have discrepancy larger than 30 on any dates.  
+\subsubsection{Apple Mobility Data}
+
+As there are counties with the same name, without additional details, it is impossible to distinguish between such counties, we decided to exclude all counties with the same name.
+
+On the other hand, there are counties that were not included in the New York Times COVID case and death number dataset, we decided to also exclude those counties.
+
+\subsection{Joining Datasets}
+
+To create final feature dataset to use in training our GNN model, we inner joined the apple mobility data, the COVID case number, the COVID death number, and the US county code (the FIPS County Code). 
+
+The county distance dataset will be the node pair dataset, where the weighting of the edges will be the inverse distance of the counties, as the shorter distance between two counties would mean higher importance between the features of those counties.
+
+
+%-------------------------------------------------------------------------------
+\section{Data Visualization}
+%-------------------------------------------------------------------------------
+
+A plot of cleansed COVID case number since 21-Jan-2021:
+\includegraphics[scale=0.2]{case}\\
+
+A plot of cleansed COVID death number since 21-Jan-2021:
+\includegraphics[scale=0.2]{death}\\
+
+We can see that the spike of death is slightly later than the spike of case, which is an expected behavior.
+
+%-------------------------------------------------------------------------------
+\section{Graph Visualization}
+%-------------------------------------------------------------------------------
+Since all the three graphs contain a huge amount of nodes and edges, it is difficult to draw the graph explicitly. Instead, the distribution of degree , path length and clustering coefficient are analyzed for three graphs with different distance constraints, which are 50 miles, 100 miles and 500 miles. These three graphs are denoted as g50m, g100m and g500m respectively. 
+
+\subsection{Degree distribution}
+First of all, the average degree and the degree distribution are investigated. The average degrees of g50m, g100m and g500m are 12.49, 45.91 and 819.05 respectively. The value of average degrees increase with the distance constraint, since higher distance constraint implies that each node (county) is connected with more neighbours. \\
+
+The degree distributions in linear scale and log scale of g50m:\\
+\includegraphics[scale=0.6]{Deg50}
+\includegraphics[scale=0.6]{Deglog50}
+
+From the plot in linear scale, it is observed that the degree distribution of g50m first follows the binomial distribution at a low number of degree (0 to 20), then follows power-law staring from a degree of 20. The log-log plot also shows that it follows power-law at a high degree. \\
+
+The degree distributions in linear scale and log scale of g100m:\\
+\includegraphics[scale=0.6]{deg100}
+\includegraphics[scale=0.6]{deglog100}
+
+The linear and log scale plot illustrate that the degree distribution of g100m follows neither binomial distribution nor power-law, but rather some abnormal distribution, with the mean shifting towards to the high degree side. \\
+
+The degree distributions in linear scale and log scale of g500m:\\
+\includegraphics[scale=0.6]{deg500}
+\includegraphics[scale=0.6]{deglog500}
+
+It seems that the degree distribution of g500m follows power-law by just looking at the linear plot, but the log-log plot illustrates that the distribution is also unusual as of that of g100m. \\
+
+
+%-------------------------------------------------------------------------------
+ \section{Graph Machine Learning}
+%-------------------------------------------------------------------------------
+\includegraphics[scale=0.3]{images/newplot.png}
+Deep Graph Library dgl
+
+GraphConv
+
+
+
+
+
+
+
+
+~\cite{morris2021weisfeiler}
+
+
+%-------------------------------------------------------------------------------
+ \section{Expected Outcome}
+%-------------------------------------------------------------------------------
+With the rise of machine learning, more specifically graph machine learning, researchers find a new way to better define problems with complex network and make predictions of them. Our target of this project is to first visualize the COVID situation in different US counties using different graph metrics, then we will try to build a GNN model that predicts the risk level of outbreak in each county. 
+
+For the modelling part, we will be focusing on the following relationships: 
+\begin{itemize}
+    \item Predicting the risk level of having a COVID outbreak in the near future base on feature input
+    \item Find the relationship between different features 
+\end{itemize} 
+We expect to conclude the relationship between features, node distance, and outbreak risk level, and thus helping counties to better prepare on public health in the near future. 
+
+%-------------------------------------------------------------------------------
+\section{Feature Selection }
+%-------------------------------------------------------------------------------
+\subsection{Feature Correlation to Target}
+
+\subsection{Feature Correlation Map}
+
+
+\subsection{Feature Importance}
+
+
+
+
+
+%-------------------------------------------------------------------------------
+\section{Regression Methodology}
+%-------------------------------------------------------------------------------
+\subsection{Methodology}
+
+
+\subsection{Evaluation}
+
+
+
+
+%-------------------------------------------------------------------------------
+\section{Team Contributions}
+%-------------------------------------------------------------------------------
+\begin{tabular}{ |p{2.5cm}||p{4cm}|  }
+ \hline
+ \multicolumn{2}{|c|}{Contributions} \\
+ \hline
+ Name    & Description\\
+ \hline
+ HUI Ho Yin & Researching,Data Engineering, Data Cleansing\\
+ \hline
+ TAM Ho Sing & Data Visualization, Report Drafting \\
+ \hline
+ CHAN Ho Yeung &  Data Visualization, Report Drafting\\
+ \hline
+ WONG Tsz Ho & Data Engineering, GNN \\
+ \hline
+\end{tabular}\\
+
+%-------------------------------------------------------------------------------
+\bibliographystyle{ieeetr}
+\bibliography{refs}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{document}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%  LocalWords:  endnotes includegraphics fread ptr nobj noindent
+%%  LocalWords:  pdflatex acks
