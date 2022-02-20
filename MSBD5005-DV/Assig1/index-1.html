@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Data Visualization - Assignment 1</title>
+</head>
+<body>
+<p>
+    This is an example of scatterplot for 10000 random points.
+</p>
+
+<div id="scatterplot"></div>
+
+<script src="https://d3js.org/d3.v4.js"></script>
+
+<script>
+    let vp = {width: 600, height: 500};
+    let margin = {top: 10, right: 30, bottom: 30, left: 60};
+
+    // append the svg object to the body of the page
+    var svg = d3.select("#scatterplot").append("svg")
+        .attr("width", vp.width + margin.left + margin.right)
+        .attr("height", vp.height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform","translate(" + margin.left + "," + margin.top + ")");
+
+    // Add X axis
+    var x = d3.scaleLinear().domain([0, 1]).range([0, vp.width]);
+    svg.append("g").attr("transform", "translate(0," + vp.height + ")")
+    .call(d3.axisBottom(x));
+
+    // Add Y axis
+    var y = d3.scaleLinear().domain([0, 1])
+        .range([vp.height, 0]);
+    svg.append("g").call(d3.axisLeft(y));
+
+    var num_pts = 10000;
+
+    //Generate data points
+    var data = [];
+    for (var i = 1; i <= num_pts; i++) {
+        data.push({x: Math.random(), y: Math.random()});
+    }
+
+    // Add dots
+    svg.append('g').selectAll("dot")
+        .data(data).enter()
+        .append("circle")
+        .attr("cx", function (d) {return x(d.x);})
+        .attr("cy", function (d) {return y(d.y);})
+        .attr("r", 1.5)
+        .style("fill", "#00EE00");
+
+</script>
+
+</body>
+</html>
