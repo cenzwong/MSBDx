@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Scatter plot on COVID CFR</title>
+  </head>
+  <body>
+    <p>
+      Scatter plot on COVID CFR
+    </p>
+
+    <div id="scatterplot"></div>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <script>
+      
+      // https://github.com/d3/d3-time-format#locale_format
+      var parseTime_github = d3.timeParse("%Y-%m-%d");      
+      
+      d3.csv('https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/jhu/full_data.csv')      
+        .then(data => {
+          var data_selection = data.map(d => {
+            return {
+              location:			d.location,
+              date: 				parseTime_github(d.date),
+              total_deaths: parseInt(d.total_deaths),
+              total_cases: 	parseInt(d.total_cases)
+            }
+          });
+        
+          //Get the Last date
+          var last_date = d3.max(data_selection, d => { return d.date; }); 
+
+          // Filter by location
+          // filtered = data_selection.filter(d => { 
+          //   return d.location === "China"
+          // });
+          // console.log(filtered)
+
+          // Filter by date
+          data_filtered = data_selection.filter(d => { 
+            return d.date - last_date == 0
+          });
+        
+          // console.log(data_filtered);
+        	
+        	//Removing Outliner (those total_deaths is zero)
+        	data_filtered_1 = data_filtered.filter(d => {
+              if(isNaN(d.total_deaths)){
+                  return false;
+              }
+              // d.value = parseInt(d.value, 10);
+              return true;
+          })
+        	
+        	//Filter aggregated value (World, Asia etc)
+        	beFiltered = [
+            "World", 
+            "High income", 
+            "Europe", 
+            "Upper middle income", 
+            "Asia", 
+            "North America", 
+            "European Union", 
+            "Lower middle income", 
+            "South America", 
+            "Africa",
+          ]
+        	data_transformed = data_filtered_1.filter(d => { 
+            // console.log("World" in beFiltered)
+            return !beFiltered.includes(d.location);
+          });
+
+        	//======================== Draw the chart ========================
+          let vp = {width: 700, height: 400};
+          let margin = {top: 10, right: 30, bottom: 30, left: 60};
+
+          // append the svg object to the body of the page
+          var svg = d3.select("#scatterplot").append("svg")
+              .attr("width", vp.width + margin.left + margin.right)
+              .attr("height", vp.height + margin.top + margin.bottom)
+              .append("g")
+              .attr("transform","translate(" + margin.left + "," + margin.top + ")");
+        
+          // Add X axis (total_cases)
+        	x_min = 0
+          x_max = d3.max(data_transformed, d => { return d.total_cases; });  //436981905
+          var x = d3.scaleLinear().domain([x_min, x_max]).range([0, vp.width]);
+          svg.append("g").attr("transform", "translate(0," + vp.height + ")")
+          .call(d3.axisBottom(x));
+
+          // Add Y axis (total_deaths)
+        	y_min = 0
+          y_max = d3.max(data_transformed, d => { return d.total_deaths; });  //5956509
+          var y = d3.scaleLinear().domain([y_min, y_max]).range([vp.height, 0]);
+          svg.append("g").call(d3.axisLeft(y));
+        
+        	// Add X axis label:
+          svg.append("text")
+              .attr("text-anchor", "end")
+              .attr("x", vp.width)
+              .attr("y", vp.height + margin.top + 20)
+              .text("total cases");
+
+          // Y axis label:
+          svg.append("text")
+              .attr("text-anchor", "end")
+              .attr("transform", "rotate(-90)")
+              .attr("y", -margin.left+10)
+              .attr("x", -margin.top)
+              .text("total deaths")
+        
+        
+        
+          svg.append('g').selectAll("dot")
+              .data(data_transformed).enter()
+              .append("circle")
+              .attr("cx", d => {return x(d.total_cases);})
+              .attr("cy", d => {return y(d.total_deaths);})
+              .attr("r", 5)
+              .style("fill", "black")
+              .on('mouseover', function () {
+                d3.select(this)
+                  .transition()
+                  .duration(500)
+                  .attr('r',20)
+                  .attr('stroke-width',3)
+              })
+              .on('mouseout', function () {
+                d3.select(this)
+                  .transition()
+                  .duration(500)
+                  .attr('r',5)
+                  .attr('stroke-width',1)
+              })
+              .append('title') // Tooltip
+              .text(d => { return d.location +
+                                   '\nDeath Rate: ' + d3.format(",.2f")(d.total_deaths * 100 / d.total_cases)  + '%' })
+              
+        	//===================================================================
+        })
+        .catch(function(error){
+           // handle error   
+        })
+      
+      
+    </script>
+  </body>
+</html>
